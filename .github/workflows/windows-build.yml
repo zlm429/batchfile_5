@@ -1,4 +1,4 @@
-name: Build Windows EXE (Final Fix)
+name: Build Windows EXE (QuantumRenderer Fix)
 
 on:
   workflow_dispatch:
@@ -33,7 +33,7 @@ jobs:
       - name: Build with Maven
         run: ./mvnw clean package -DskipTests
 
-      # 关键步骤1：用 jlink 生成包含所有 JavaFX 模块的自定义 JRE
+      # 关键修复：强制打包所有 JavaFX 模块，包括底层图形库
       - name: Create custom runtime with jlink
         run: |
           jlink `
@@ -41,11 +41,11 @@ jobs:
             --no-man-pages `
             --compress=2 `
             --strip-debug `
-            --add-modules java.base,java.desktop,java.xml,javafx.controls,javafx.fxml,javafx.graphics,javafx.base,javafx.swing `
+            --add-modules java.base,java.desktop,java.xml,java.logging,java.naming,java.sql,javafx.base,javafx.controls,javafx.fxml,javafx.graphics,javafx.media,javafx.swing,javafx.web `
             --module-path $env:JAVAFX_PATH `
             --output target\runtime
 
-      # 关键步骤2：用 jpackage 打包成 EXE，直接使用上面生成的 runtime
+      # 关键修复：添加兜底参数，强制使用软件渲染 + 禁用硬件加速
       - name: Package EXE
         run: |
           jpackage `
@@ -58,7 +58,7 @@ jobs:
             --app-version 1.0.0 `
             --vendor "RT" `
             --runtime-image target\runtime `
-            --java-options "-Xmx2G -Dfile.encoding=UTF-8 -Dprism.order=sw" `
+            --java-options "-Xmx2G -Dfile.encoding=UTF-8 -Dprism.order=sw -Dprism.verbose=true -Dprism.forceGPU=false -Djava.awt.headless=false" `
             --win-shortcut `
             --win-menu `
             --win-console
